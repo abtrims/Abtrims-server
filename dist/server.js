@@ -5,7 +5,7 @@ import {
   envVars,
   prisma,
   startLogCleanupScheduler
-} from "./chunk-SV6H25B6.js";
+} from "./chunk-K6WGQCYM.js";
 
 // src/app/utils/seed.ts
 var seedSuperAdmin = async () => {

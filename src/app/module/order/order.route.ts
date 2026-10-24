@@ -2,9 +2,10 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { checkAuth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
-import { orderTrackRateLimiter } from "../../middleware/rateLimiter";
+import { guestOrderRateLimiter, orderTrackRateLimiter } from "../../middleware/rateLimiter";
 import { OrderController } from "./order.controller";
 import {
+  createGuestOrderZodSchema,
   createOrderZodSchema,
   trackOrderZodSchema,
   updateOrderItemZodSchema,
@@ -22,6 +23,14 @@ router.post(
   checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   validateRequest(createOrderZodSchema),
   OrderController.createOrder,
+);
+
+// Public — online checkout without an account (when enabled in Site Settings)
+router.post(
+  "/guest",
+  guestOrderRateLimiter,
+  validateRequest(createGuestOrderZodSchema),
+  OrderController.createGuestOrder,
 );
 
 router.get(

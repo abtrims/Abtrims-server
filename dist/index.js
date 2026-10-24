@@ -1,6 +1,6 @@
 import {
   app_default
-} from "./chunk-K6WGQCYM.js";
+} from "./chunk-EOQAEXEB.js";
 
 // src/index.ts
 var index_default = app_default;

@@ -1,4 +1,4 @@
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -27,12 +27,21 @@ export const authRateLimiter = rateLimit({
   },
 });
 
-// Guest (unauthenticated) order placement from public landing pages — abuse/spam guard
+// Guest (unauthenticated) order placement and payment start — abuse/spam guard.
+// These requests come through the Next.js server, so every customer shares its
+// IP; counting per phone number (orders) or order (payments) keeps one
+// spammer from blocking everyone else.
 export const guestOrderRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 20, // Limit each IP to 20 guest orders per 15 minutes
+  limit: 20, // 20 guest orders per phone (or payment starts per order) per 15 minutes
   standardHeaders: "draft-8",
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const phone = String(req.body?.phone ?? "").replace(/\D/g, "").slice(-10);
+    if (phone) return `phone:${phone}`;
+    if (req.body?.orderId) return `order:${String(req.body.orderId)}`;
+    return ipKeyGenerator(req.ip ?? "");
+  },
   message: {
     success: false,
     message: "Too many orders placed from this device, please try again later",

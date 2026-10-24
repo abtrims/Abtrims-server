@@ -141,6 +141,7 @@ const createGuestOrder = async (
   slug: string,
   payload: {
     fullName: string;
+    companyName?: string;
     phone: string;
     address: string;
     district: string;
@@ -151,6 +152,7 @@ const createGuestOrder = async (
     notes?: string;
     paymentMethod?: "COD" | "BKASH";
   },
+  userId: string | null = null,
 ) => {
   const landingPage = await prisma.landingPage.findUnique({ where: { slug } });
 
@@ -158,8 +160,11 @@ const createGuestOrder = async (
     throw new AppError(status.NOT_FOUND, "Landing page not found");
   }
 
-  const order = await OrderService.createOrder(null, {
+  if (!userId) await OrderService.assertGuestCheckoutEnabled();
+
+  const order = await OrderService.createOrder(userId, {
     fullName: payload.fullName,
+    companyName: payload.companyName,
     phone: payload.phone,
     address: payload.address,
     district: payload.district,

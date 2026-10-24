@@ -20,6 +20,9 @@ model SiteSetting {
   // Products (or variants) at or below this stock show on the Low Stock page
   lowStockThreshold Int @default(5)
 
+  // Lets customers place online orders without logging in
+  guestCheckoutEnabled Boolean @default(true)
+
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")

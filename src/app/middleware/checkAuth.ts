@@ -193,3 +193,12 @@ export const checkAuth =
       next(error);
     }
   };
+
+// For routes open to guests: sets req.user when a valid login is present,
+// otherwise (no or stale cookies) the request continues as a guest
+export const optionalAuth =
+  () => (req: Request, res: Response, next: NextFunction) =>
+    checkAuth()(req, res, (error?: any) => {
+      if (error) req.user = undefined as any;
+      next();
+    });

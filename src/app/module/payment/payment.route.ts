@@ -12,6 +12,13 @@ router.post(
   PaymentController.initiateSslcommerzPayment,
 );
 
+// Orders placed without an account
+router.post(
+  "/sslcommerz/initiate-guest",
+  guestOrderRateLimiter,
+  PaymentController.initiateSslcommerzGuestPayment,
+);
+
 // Public — called directly by SSLCommerz's servers/browser redirects, not our app
 router
   .route("/sslcommerz/success")
@@ -37,7 +44,7 @@ router.post(
   PaymentController.initiateBkashPayment,
 );
 
-// Landing page (guest) orders
+// Orders placed without an account (online checkout or landing page)
 router.post(
   "/bkash/initiate-guest",
   guestOrderRateLimiter,

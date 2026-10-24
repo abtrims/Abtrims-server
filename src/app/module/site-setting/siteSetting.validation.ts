@@ -15,4 +15,5 @@ export const updateSiteSettingZodSchema = z.object({
   whatsapp: z.string().optional(),
   copyrightText: z.string().optional(),
   lowStockThreshold: z.coerce.number().int().min(0).max(100000).optional(),
+  guestCheckoutEnabled: z.boolean().optional(),
 });

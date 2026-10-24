@@ -9,11 +9,12 @@ model Order {
   orderStatus   OrderStatus   @default(PENDING)
 
   // Shipping address (structured)
-  fullName String?
-  phone    String?
-  email    String? // Optional, for order updates by email
-  address  String?
-  district String?
+  fullName    String?
+  companyName String? // Optional, the customer's company
+  phone       String?
+  email       String? // Optional, for order updates by email
+  address     String?
+  district    String?
 
   notes String? // Optional customer notes
 
@@ -28,6 +29,7 @@ model Order {
 
   discountAmount Float   @default(0)
   shippingFee    Float   @default(0)
+  vatAmount      Float   @default(0) // POS: VAT charged on top of (subtotal - discount)
   couponId       String?
   coupon         Coupon? @relation(fields: [couponId], references: [id])
 

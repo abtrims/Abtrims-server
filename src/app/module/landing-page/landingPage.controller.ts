@@ -119,6 +119,7 @@ const createGuestOrder = catchAsync(async (req: Request, res: Response) => {
   const result = await LandingPageService.createGuestOrder(
     req.params.slug as string,
     req.body,
+    req.user?.userId ?? null,
   );
 
   sendResponse(res, {

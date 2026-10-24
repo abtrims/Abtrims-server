@@ -77,6 +77,7 @@ export const updateLandingPageZodSchema = z.object({
 
 export const createGuestLandingOrderZodSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
+  companyName: z.string().trim().max(200).optional(),
   phone: bdMobilePhoneSchema,
   address: z.string().min(1, "Address is required"),
   district: z.string().min(1, "District is required"),

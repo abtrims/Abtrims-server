@@ -6,10 +6,23 @@ import { envVars } from "../../config/env";
 import { PaymentService } from "./payment.service";
 
 const initiateSslcommerzPayment = catchAsync(async (req: Request, res: Response) => {
-  const result = await PaymentService.initiateSslcommerzPayment(
-    req.body.orderId,
-    req.user.userId as string,
-  );
+  const result = await PaymentService.initiateSslcommerzPayment(req.body.orderId, {
+    userId: req.user.userId as string,
+  });
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Payment session created successfully",
+    data: result,
+  });
+});
+
+// Orders placed without an account
+const initiateSslcommerzGuestPayment = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.initiateSslcommerzPayment(req.body.orderId, {
+    guest: true,
+  });
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -87,7 +100,7 @@ const initiateBkashPayment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// Landing page orders are placed without an account
+// Orders placed without an account (online checkout or landing page)
 const initiateBkashGuestPayment = catchAsync(async (req: Request, res: Response) => {
   const result = await PaymentService.initiateBkashPayment(req.body.orderId, {
     guest: true,
@@ -115,13 +128,14 @@ const handleBkashCallback = async (req: Request, res: Response) => {
   if (result.reason === "cancelled") params.set("reason", "cancelled");
   if ("orderId" in result && result.orderId) {
     params.set("order", result.orderId);
-    if (result.orderType === "LANDING_PAGE") params.set("guest", "1");
+    if (result.isGuest) params.set("guest", "1");
   }
   return res.redirect(303, `${envVars.FRONTEND_URL}/payment-failed?${params.toString()}`);
 };
 
 export const PaymentController = {
   initiateSslcommerzPayment,
+  initiateSslcommerzGuestPayment,
   handleSuccess,
   handleFail,
   handleCancel,

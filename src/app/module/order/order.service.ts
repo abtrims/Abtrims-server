@@ -14,6 +14,7 @@ import { RedxCourierService } from "../courier/redxCourier.service";
 import { CourierProvider } from "../../../generated/prisma/enums";
 import { SmsService } from "../sms/sms.service";
 import { BDCourierService } from "./bdCourier.service";
+import { SiteSettingService } from "../site-setting/siteSetting.service";
 
 const COMMISSION_RATE = 0.1; // 10% commission
 
@@ -21,6 +22,7 @@ const createOrder = async (
   userId: string | null,
   payload: {
     fullName: string;
+    companyName?: string;
     phone: string;
     email?: string;
     address: string;
@@ -156,6 +158,7 @@ const createOrder = async (
         shippingFee,
         couponId: payload.couponId || null,
         fullName: payload.fullName,
+        companyName: payload.companyName?.trim() || null,
         phone: payload.phone,
         email: payload.email?.trim() || null,
         address: payload.address,
@@ -309,7 +312,7 @@ const dateRangeWhere = (from?: unknown, to?: unknown) => {
 const buildOrderListQuery = (queryParams: IQueryParams) => {
   const { from, to, ...rest } = queryParams;
   const orderQuery = new QueryBuilder(prisma.order, rest, {
-    searchableFields: ["orderNumber", "fullName", "phone", "address", "district"],
+    searchableFields: ["orderNumber", "fullName", "companyName", "phone", "address", "district"],
     filterableFields: ["orderStatus", "paymentStatus", "userId", "orderType"],
   })
     .search()
@@ -391,7 +394,9 @@ const PUBLIC_ORDER_SELECT = {
   totalAmount: true,
   discountAmount: true,
   shippingFee: true,
+  vatAmount: true,
   fullName: true,
+  companyName: true,
   phone: true,
   email: true,
   address: true,
@@ -509,7 +514,10 @@ const updateOrderDiscount = async (id: string, discountAmount: number) => {
     0,
   );
 
-  const newTotalAmount = Math.max(0, itemsSubtotal + order.shippingFee - discountAmount);
+  const newTotalAmount = Math.max(
+    0,
+    itemsSubtotal + order.shippingFee + order.vatAmount - discountAmount,
+  );
 
   const updatedOrder = await prisma.order.update({
     where: { id },
@@ -756,7 +764,10 @@ const updateOrderItem = async (
     const itemsTotal = allItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const newTotalAmount = Math.max(
       0,
-      itemsTotal + orderItem.order.shippingFee - orderItem.order.discountAmount,
+      itemsTotal +
+        orderItem.order.shippingFee +
+        orderItem.order.vatAmount -
+        orderItem.order.discountAmount,
     );
 
     await tx.order.update({
@@ -794,8 +805,24 @@ const deleteOrder = async (id: string) => {
   });
 };
 
+// Orders without an account (online checkout and landing pages) are only
+// taken while guest checkout is on in Dashboard → Site Settings
+const assertGuestCheckoutEnabled = async () => {
+  const settings = await SiteSettingService.getSiteSettings();
+  if (!settings.guestCheckoutEnabled) {
+    throw new AppError(status.FORBIDDEN, "Please log in to place an order");
+  }
+};
+
+const createGuestOrder = async (payload: Parameters<typeof createOrder>[1]) => {
+  await assertGuestCheckoutEnabled();
+  return createOrder(null, { ...payload, orderType: OrderType.ONLINE });
+};
+
 export const OrderService = {
   createOrder,
+  createGuestOrder,
+  assertGuestCheckoutEnabled,
   exportOrders,
   getAllOrders,
   getOrderById,

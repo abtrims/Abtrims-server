@@ -17,6 +17,18 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Online checkout without an account (only when enabled in Site Settings)
+const createGuestOrder = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.createGuestOrder(req.body);
+
+  sendResponse(res, {
+    httpStatusCode: status.CREATED,
+    success: true,
+    message: "Order placed successfully",
+    data: result,
+  });
+});
+
 const getAllOrders = catchAsync(async (req: Request, res: Response) => {
   const { data, meta } = await OrderService.getAllOrders(req.query as IQueryParams);
 
@@ -220,6 +232,7 @@ export const OrderController = {
   getRedxAreas,
   exportOrders,
   createOrder,
+  createGuestOrder,
   getAllOrders,
   getMyOrders,
   getOrderById,

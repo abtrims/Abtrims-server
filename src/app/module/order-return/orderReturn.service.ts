@@ -93,11 +93,11 @@ const processOrderReturn = async (
       0,
     );
 
-    // Shipping/discount are order-level and untouched by a return — only the
-    // items subtotal shrinks.
+    // Shipping/VAT/discount are order-level and untouched by a return — only
+    // the items subtotal shrinks.
     const newTotalAmount = Math.max(
       0,
-      itemsRemainingSubtotal + order.shippingFee - order.discountAmount,
+      itemsRemainingSubtotal + order.shippingFee + order.vatAmount - order.discountAmount,
     );
 
     await tx.order.update({

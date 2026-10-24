@@ -31,6 +31,7 @@ const updateSiteSettings = async (payload: {
   whatsapp?: string;
   copyrightText?: string;
   lowStockThreshold?: number;
+  guestCheckoutEnabled?: boolean;
 }) => {
   // Ensure the default settings row exists first
   await getSiteSettings();

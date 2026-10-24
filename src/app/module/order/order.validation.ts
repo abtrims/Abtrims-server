@@ -3,6 +3,7 @@ import { bdMobilePhoneSchema } from "../../utils/bdPhone";
 
 export const createOrderZodSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
+  companyName: z.string().trim().max(200).optional(),
   phone: bdMobilePhoneSchema,
   email: z
     .union([z.string().trim().email("Enter a valid email address"), z.literal("")])
@@ -22,6 +23,12 @@ export const createOrderZodSchema = z.object({
   shippingFee: z.number().optional(),
   checkoutSessionToken: z.string().optional(),
   paymentMethod: z.enum(["COD", "SSLCOMMERZ", "BKASH"]).optional(),
+});
+
+// Checkout without an account: there is no cart to fall back on, so the
+// items must always be sent
+export const createGuestOrderZodSchema = createOrderZodSchema.extend({
+  items: createOrderZodSchema.shape.items.unwrap().min(1, "No items provided for order"),
 });
 
 export const updateOrderStatusZodSchema = z.object({

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { Role } from "../../../generated/prisma/enums";
-import { checkAuth } from "../../middleware/checkAuth";
+import { checkAuth, optionalAuth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { multerUpload } from "../../config/multer.config";
 import { guestOrderRateLimiter } from "../../middleware/rateLimiter";
@@ -69,6 +69,9 @@ router.get("/slug/:slug", LandingPageController.getLandingPageBySlug);
 router.post(
   "/slug/:slug/order",
   guestOrderRateLimiter,
+  // Logged-in customers get the order on their account; guests are allowed
+  // only while guest checkout is on (Dashboard → Site Settings)
+  optionalAuth(),
   validateRequest(createGuestLandingOrderZodSchema),
   LandingPageController.createGuestOrder,
 );

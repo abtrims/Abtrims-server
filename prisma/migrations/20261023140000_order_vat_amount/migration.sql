@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "orders" ADD COLUMN "vatAmount" DOUBLE PRECISION NOT NULL DEFAULT 0;

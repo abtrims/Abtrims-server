@@ -118,6 +118,7 @@ const createPosOrder = async (
     coupon?: string | null;
     customer?: {
       name?: string | null;
+      companyName?: string | null;
       phone?: string | null;
       address?: string | null;
       district?: string | null;
@@ -174,11 +175,13 @@ const createPosOrder = async (
         totalAmount: payload.total,
         discountAmount: payload.discount,
         shippingFee: payload.shippingCharge,
+        vatAmount: payload.tax,
         paymentStatus: PaymentStatus.PAID,
         orderStatus: OrderStatus.DELIVERED,
         paymentMethod: payload.payment.method,
         
         fullName: payload.customer?.name || "Walk-in Customer",
+        companyName: payload.customer?.companyName?.trim() || null,
         phone: payload.customer?.phone || "N/A",
         address: payload.customer?.address || "N/A",
         district: payload.customer?.district || "N/A",
@@ -247,7 +250,7 @@ const createPosOrder = async (
 
 const getPosOrders = async (shopId: string, queryParams: IQueryParams) => {
   const orderQuery = new QueryBuilder(prisma.order, queryParams, {
-    searchableFields: ["orderNumber", "phone", "fullName"],
+    searchableFields: ["orderNumber", "phone", "fullName", "companyName"],
     filterableFields: ["paymentMethod"],
   })
     .search()

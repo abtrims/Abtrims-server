@@ -11,12 +11,30 @@ import { OrderService } from "../order/order.service";
 import { backendApiBaseUrl, SslcommerzService } from "./sslcommerz.service";
 import { BkashService } from "./bkash.service";
 
-const initiateSslcommerzPayment = async (orderId: string, userId: string) => {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) throw new AppError(status.NOT_FOUND, "Order not found");
-  if (order.userId !== userId) {
+// Who is starting a payment: the signed-in owner of the order, or a guest
+// paying for an order placed without an account
+type PaymentRequester = { userId: string } | { guest: true };
+
+const assertCanPay = (
+  order: { userId: string | null; orderType: OrderType },
+  requester: PaymentRequester,
+) => {
+  if ("guest" in requester) {
+    const isGuestOrder =
+      !order.userId &&
+      (order.orderType === OrderType.ONLINE || order.orderType === OrderType.LANDING_PAGE);
+    if (!isGuestOrder) {
+      throw new AppError(status.FORBIDDEN, "This order can't be paid here");
+    }
+  } else if (order.userId !== requester.userId) {
     throw new AppError(status.FORBIDDEN, "This order does not belong to you");
   }
+};
+
+const initiateSslcommerzPayment = async (orderId: string, requester: PaymentRequester) => {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new AppError(status.NOT_FOUND, "Order not found");
+  assertCanPay(order, requester);
   if (order.paymentStatus === PaymentStatus.PAID) {
     throw new AppError(status.BAD_REQUEST, "This order has already been paid");
   }
@@ -79,22 +97,12 @@ const markSslcommerzPaymentFailed = async (tranId: string) => {
 
 // ── bKash ────────────────────────────────────────────────────────────────
 
-// guest = landing page order (no account); otherwise the order must belong
-// to the signed-in customer
-const initiateBkashPayment = async (
-  orderId: string,
-  requester: { userId: string } | { guest: true },
-) => {
+// guest = online or landing page order placed without an account; otherwise
+// the order must belong to the signed-in customer
+const initiateBkashPayment = async (orderId: string, requester: PaymentRequester) => {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new AppError(status.NOT_FOUND, "Order not found");
-
-  if ("guest" in requester) {
-    if (order.orderType !== OrderType.LANDING_PAGE || order.userId) {
-      throw new AppError(status.FORBIDDEN, "This order can't be paid here");
-    }
-  } else if (order.userId !== requester.userId) {
-    throw new AppError(status.FORBIDDEN, "This order does not belong to you");
-  }
+  assertCanPay(order, requester);
   if (order.paymentStatus === PaymentStatus.PAID) {
     throw new AppError(status.BAD_REQUEST, "This order has already been paid");
   }
@@ -123,7 +131,7 @@ const initiateBkashPayment = async (
 
 export type BkashCallbackResult =
   | { ok: true; orderId: string }
-  | { ok: false; orderId?: string; orderType?: OrderType; reason: "cancelled" | "failed" };
+  | { ok: false; orderId?: string; isGuest?: boolean; reason: "cancelled" | "failed" };
 
 // bKash redirects the customer here with ?paymentID&status. The payment only
 // counts once our own execute (or status query) call says it completed for
@@ -140,7 +148,7 @@ const handleBkashCallback = async (
 
   const fail = async (reason: "cancelled" | "failed") => {
     await OrderService.updatePaymentStatus(order.id, PaymentStatus.FAILED);
-    return { ok: false as const, orderId: order.id, orderType: order.orderType, reason };
+    return { ok: false as const, orderId: order.id, isGuest: !order.userId, reason };
   };
 
   if (callbackStatus !== "success") {

@@ -18,12 +18,13 @@ export const updatePosCartItemZodSchema = z.object({
 export const createPosOrderZodSchema = z.object({
   subtotal: z.number(),
   discount: z.number().default(0),
-  tax: z.number().default(0),
-  shippingCharge: z.number().default(0),
+  tax: z.number().min(0).default(0),
+  shippingCharge: z.number().min(0).default(0),
   total: z.number(),
   coupon: z.string().optional().nullable(),
   customer: z.object({
     name: z.string().optional().nullable(),
+    companyName: z.string().trim().max(200).optional().nullable(),
     phone: bdMobilePhoneSchema,
     address: z.string().optional().nullable(),
     district: z.string().optional().nullable(),

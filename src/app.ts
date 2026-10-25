@@ -51,6 +51,9 @@ app.use(
     origin: [
       envVars.FRONTEND_URL,
       envVars.BETTER_AUTH_URL,
+      // The Google redirect page is served from the backend's own domain and
+      // calls /api/auth/sign-in/social from there, so that origin must be allowed.
+      ...(process.env.BACKEND_URL ? [process.env.BACKEND_URL] : []),
       "http://localhost:3000",
       "http://localhost:5000",
     ],

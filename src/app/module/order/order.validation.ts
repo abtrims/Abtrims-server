@@ -32,7 +32,7 @@ export const createGuestOrderZodSchema = createOrderZodSchema.extend({
 });
 
 export const updateOrderStatusZodSchema = z.object({
-  status: z.enum(["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "IN_COURIER", "DELIVERED", "CANCELLED"]),
 });
 
 export const updateOrderDiscountZodSchema = z.object({
@@ -54,6 +54,28 @@ export const assignCourierZodSchema = z
     message: "Select the RedX delivery area",
   });
 
+// Bulk actions on the admin order list
+const bulkOrderIds = z.array(z.string().uuid()).min(1, "Select at least one order").max(200);
+
+export const bulkUpdateOrderStatusZodSchema = z.object({
+  ids: bulkOrderIds,
+  status: updateOrderStatusZodSchema.shape.status,
+});
+
+export const bulkUpdatePaymentStatusZodSchema = z.object({
+  ids: bulkOrderIds,
+  paymentStatus: updatePaymentStatusZodSchema.shape.paymentStatus,
+});
+
+export const bulkAssignCourierZodSchema = z.object({
+  ids: bulkOrderIds,
+  provider: z.enum(["PATHAO", "STEADFAST"]),
+});
+
+export const bulkDeleteOrdersZodSchema = z.object({
+  ids: bulkOrderIds,
+});
+
 export const trackOrderZodSchema = z.object({
   orderNumber: z.string().min(1, "Order number is required"),
   phone: z.string().min(1, "Phone number is required"),
@@ -61,7 +83,7 @@ export const trackOrderZodSchema = z.object({
 
 export const updateOrderItemZodSchema = z
   .object({
-    status: z.enum(["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]).optional(),
+    status: z.enum(["PENDING", "CONFIRMED", "IN_COURIER", "DELIVERED", "CANCELLED"]).optional(),
     productId: z.string().min(1).optional(),
     productVariantId: z.string().nullable().optional(),
     quantity: z.number().int().positive().optional(),

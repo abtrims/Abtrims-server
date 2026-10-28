@@ -48,7 +48,7 @@ const notifyOrderStatusChanged = async (
       orderId: order.id,
       type: NotificationType.ORDER_STATUS_CHANGED,
       title: "Order Status Updated",
-      message: `Your order #${order.orderNumber} is now ${order.orderStatus.toLowerCase()}.`,
+      message: `Your order #${order.orderNumber} is now ${order.orderStatus.toLowerCase().replace("_", " ")}.`,
     },
   });
 };

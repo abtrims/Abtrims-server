@@ -189,6 +189,57 @@ const deleteOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const bulkMessage = (result: { succeeded: number; failed: unknown[] }, done: string) =>
+  `${result.succeeded} order(s) ${done}` +
+  (result.failed.length ? `, ${result.failed.length} failed` : "");
+
+const bulkUpdateOrderStatus = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.bulkUpdateOrderStatus(req.body.ids, req.body.status);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: bulkMessage(result, "updated"),
+    data: result,
+  });
+});
+
+const bulkUpdatePaymentStatus = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.bulkUpdatePaymentStatus(
+    req.body.ids,
+    req.body.paymentStatus,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: bulkMessage(result, "updated"),
+    data: result,
+  });
+});
+
+const bulkAssignCourier = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.bulkAssignCourier(req.body.ids, req.body.provider);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: bulkMessage(result, "assigned to courier"),
+    data: result,
+  });
+});
+
+const bulkDeleteOrders = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.bulkDeleteOrders(req.body.ids);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: bulkMessage(result, "deleted"),
+    data: result,
+  });
+});
+
 const updateOrderItemStatus = catchAsync(async (req: Request, res: Response) => {
   const result = await OrderService.updateOrderItemStatus(
     req.params.id as string,
@@ -243,6 +294,10 @@ export const OrderController = {
   updatePaymentStatus,
   assignCourier,
   deleteOrder,
+  bulkUpdateOrderStatus,
+  bulkUpdatePaymentStatus,
+  bulkAssignCourier,
+  bulkDeleteOrders,
   updateOrderItemStatus,
   updateOrderItem,
   checkOrderFraud,

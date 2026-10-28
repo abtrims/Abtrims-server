@@ -20,8 +20,8 @@ enum ProductStatus {
 
 enum OrderStatus {
   PENDING
-  PROCESSING
-  SHIPPED
+  CONFIRMED
+  IN_COURIER
   DELIVERED
   CANCELLED
 }

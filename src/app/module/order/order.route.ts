@@ -13,6 +13,10 @@ import {
   updateOrderDiscountZodSchema,
   updatePaymentStatusZodSchema,
   assignCourierZodSchema,
+  bulkUpdateOrderStatusZodSchema,
+  bulkUpdatePaymentStatusZodSchema,
+  bulkAssignCourierZodSchema,
+  bulkDeleteOrdersZodSchema,
 } from "./order.validation";
 
 const router = Router();
@@ -73,6 +77,36 @@ router.get(
   "/export",
   checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
   OrderController.exportOrders,
+);
+
+// Bulk actions on selected orders — kept above the "/:id" routes so "bulk" is not read as an id
+router.patch(
+  "/bulk/status",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  validateRequest(bulkUpdateOrderStatusZodSchema),
+  OrderController.bulkUpdateOrderStatus,
+);
+
+router.patch(
+  "/bulk/payment-status",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  validateRequest(bulkUpdatePaymentStatusZodSchema),
+  OrderController.bulkUpdatePaymentStatus,
+);
+
+router.patch(
+  "/bulk/assign-courier",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  validateRequest(bulkAssignCourierZodSchema),
+  OrderController.bulkAssignCourier,
+);
+
+// DELETE (not POST) so staff need the "order.delete" permission
+router.delete(
+  "/bulk",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  validateRequest(bulkDeleteOrdersZodSchema),
+  OrderController.bulkDeleteOrders,
 );
 
 router.patch(

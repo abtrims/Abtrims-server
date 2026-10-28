@@ -490,8 +490,8 @@ const updateOrderStatus = async (id: string, statusValue: OrderStatus) => {
     const name = updatedOrder.fullName || "Customer";
     const orderRef = updatedOrder.orderNumber || updatedOrder.id;
     const statusMessages: Partial<Record<OrderStatus, string>> = {
-      [OrderStatus.PROCESSING]: `Hi ${name}, your order (ID: ${orderRef}) is now being processed.`,
-      [OrderStatus.SHIPPED]: `Hi ${name}, your order (ID: ${orderRef}) has been shipped! Our delivery team will contact you soon.`,
+      [OrderStatus.CONFIRMED]: `Hi ${name}, your order (ID: ${orderRef}) has been confirmed.`,
+      [OrderStatus.IN_COURIER]: `Hi ${name}, your order (ID: ${orderRef}) has been handed to the courier! Our delivery team will contact you soon.`,
       [OrderStatus.DELIVERED]: `Hi ${name}, your order (ID: ${orderRef}) has been delivered successfully! Thank you for shopping with us.`,
       [OrderStatus.CANCELLED]: `Hi ${name}, your order (ID: ${orderRef}) has been cancelled. If this wasn't you, please contact support.`,
     };
@@ -594,7 +594,7 @@ const assignCourier = async (
     result = await SteadfastCourierService.createOrder(orderInput);
   }
 
-  return prisma.order.update({
+  const updatedOrder = await prisma.order.update({
     where: { id },
     data: {
       courierProvider: provider,
@@ -604,6 +604,12 @@ const assignCourier = async (
       courierAssignedAt: new Date(),
     },
   });
+
+  // Handed to the courier — move the order to IN_COURIER (sends the SMS/notification)
+  if (order.orderStatus === OrderStatus.PENDING || order.orderStatus === OrderStatus.CONFIRMED) {
+    return updateOrderStatus(id, OrderStatus.IN_COURIER);
+  }
+  return updatedOrder;
 };
 
 const updateOrderItemStatus = async (
@@ -668,10 +674,10 @@ const updateOrderItem = async (
   }
 
   if (orderItem.order.orderType !== OrderType.POS) {
-    if (orderItem.status !== OrderStatus.PENDING && orderItem.status !== OrderStatus.PROCESSING) {
+    if (orderItem.status !== OrderStatus.PENDING && orderItem.status !== OrderStatus.CONFIRMED) {
       throw new AppError(
         status.BAD_REQUEST,
-        "This item can no longer be edited once it has shipped",
+        "This item can no longer be edited once it is with the courier",
       );
     }
   }
@@ -805,6 +811,34 @@ const deleteOrder = async (id: string) => {
   });
 };
 
+// Bulk actions: run the single-order action for each id one by one (so SMS,
+// notifications and courier rules stay the same) and report what failed
+const runBulk = async (ids: string[], action: (id: string) => Promise<unknown>) => {
+  const failed: { id: string; message: string }[] = [];
+
+  for (const id of ids) {
+    try {
+      await action(id);
+    } catch (error: any) {
+      failed.push({ id, message: error?.message || "Failed" });
+    }
+  }
+
+  return { total: ids.length, succeeded: ids.length - failed.length, failed };
+};
+
+const bulkUpdateOrderStatus = (ids: string[], statusValue: OrderStatus) =>
+  runBulk(ids, (id) => updateOrderStatus(id, statusValue));
+
+const bulkUpdatePaymentStatus = (ids: string[], paymentStatus: PaymentStatus) =>
+  runBulk(ids, (id) => updatePaymentStatus(id, paymentStatus));
+
+// RedX needs a delivery area per order, so it is assigned one order at a time
+const bulkAssignCourier = (ids: string[], provider: CourierProvider) =>
+  runBulk(ids, (id) => assignCourier(id, provider));
+
+const bulkDeleteOrders = (ids: string[]) => runBulk(ids, (id) => deleteOrder(id));
+
 // Orders without an account (online checkout and landing pages) are only
 // taken while guest checkout is on in Dashboard → Site Settings
 const assertGuestCheckoutEnabled = async () => {
@@ -833,6 +867,10 @@ export const OrderService = {
   updatePaymentStatus,
   assignCourier,
   deleteOrder,
+  bulkUpdateOrderStatus,
+  bulkUpdatePaymentStatus,
+  bulkAssignCourier,
+  bulkDeleteOrders,
   updateOrderItemStatus,
   updateOrderItem,
   checkOrderFraud,

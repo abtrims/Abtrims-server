@@ -286,6 +286,7 @@ const orderListInclude = {
           sku: true,
           type: true,
           attributes: true,
+          shortDescription: true,
         },
       },
       productVariant: {

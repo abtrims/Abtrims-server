@@ -33,14 +33,21 @@ const createCategory = async (payload: {
 };
 
 const getAllCategories = async (queryParams: IQueryParams) => {
-  const result = await new QueryBuilder(prisma.category, queryParams, {
+  const queryBuilder = new QueryBuilder(prisma.category, queryParams, {
     searchableFields: ["name", "slug"],
     filterableFields: ["isActive", "parentId"],
   })
     .search()
     .filter()
-    .sort()
-    .paginate()
+    .sort();
+
+  // No limit in the request = return every category (dropdowns, menus).
+  // The admin category table sends its own limit, so it stays paginated.
+  if (queryParams.limit) {
+    queryBuilder.paginate();
+  }
+
+  const result = await queryBuilder
     .include({ parent: true, subcategories: true })
     .execute();
 
